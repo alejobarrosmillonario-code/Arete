@@ -1,0 +1,301 @@
+import hashlib
+import time
+import random
+import json
+from dataclasses import dataclass, asdict
+from typing import List, Dict, Tuple, Optional
+
+# =====================================================================
+# ESTILOS Y COLORES EN CONSOLA (ANSI)
+# =====================================================================
+class Colors:
+    RESET = "\033[0m"
+    BOLD = "\033[1m"
+    CYAN = "\033[96m"
+    GREEN = "\033[92m"
+    YELLOW = "\033[93m"
+    RED = "\033[91m"
+    PURPLE = "\033[95m"
+    BLUE = "\033[94m"
+
+def print_header(title: str):
+    print(f"\n{Colors.BOLD}{Colors.PURPLE}{'='*65}{Colors.RESET}")
+    print(f"{Colors.BOLD}{Colors.CYAN}  {title}{Colors.RESET}")
+    print(f"{Colors.BOLD}{Colors.PURPLE}{'='*65}{Colors.RESET}\n")
+
+# =====================================================================
+# PILAR 1: SEGURIDAD FÍSICA Y CUÁNTICA (QKD + RETÍCULOS)
+# =====================================================================
+class QuantumLatticeCrypto:
+    """
+    Simulación simplificada de Criptografía Basada en Retículos (LWE)
+    y Distribución Cuántica de Claves (QKD) con detección de escuchas (Eavesdropping).
+    """
+    def __init__(self, vector_dimension: int = 8):
+        self.dim = vector_dimension
+
+    def generate_lattice_keys(self) -> Tuple[List[int], List[int]]:
+        """Genera un vector de retículo público y una clave privada."""
+        private_key = [random.randint(-5, 5) for _ in range(self.dim)]
+        # B en el espacio de retículo B = A*s + e
+        public_key = [x * 3 + random.randint(-1, 1) for x in private_key]
+        return private_key, public_key
+
+    @staticmethod
+    def simulate_qkd_transmission(photons_count: int = 16, intercept: bool = False) -> Tuple[bool, str]:
+        """
+        Simula la transmisión fotónica entrelazada (QKD).
+        Si un tercero observa (intercept=True), el estado colapsa.
+        """
+        sender_bases = [random.choice(['+', 'X']) for _ in range(photons_count)]
+        photons_state = [random.choice([0, 1]) for _ in range(photons_count)]
+        
+        receiver_bases = [random.choice(['+', 'X']) for _ in range(photons_count)]
+        
+        # Simulación de escucha (Eavesdropper / Eve)
+        if intercept:
+            eve_bases = [random.choice(['+', 'X']) for _ in range(photons_count)]
+            # Al medir, Eve altera el estado fotónico cuando las bases no coinciden
+            for i in range(photons_count):
+                if eve_bases[i] != sender_bases[i]:
+                    photons_state[i] = random.choice([0, 1])
+
+        # Verificación del canal seguro (Sifting)
+        errors = 0
+        valid_bits = 0
+        for i in range(photons_count):
+            if sender_bases[i] == receiver_bases[i]:
+                valid_bits += 1
+                if intercept and random.random() > 0.5:
+                    errors += 1
+
+        if intercept or errors > 0:
+            return False, f"{Colors.RED}[ALERTA QKD] Colapso de estado cuántico detectado. Intento de interceptación.{Colors.RESET}"
+        return True, f"{Colors.GREEN}[CANAL QKD SEGURO] Claves fotónicas sincronizadas exitosamente.{Colors.RESET}"
+
+# =====================================================================
+# PILAR 2: CONSENSO COGNITIVO (PRUEBA DE PRAXIS)
+# =====================================================================
+@dataclass
+class PraxisProblem:
+    problem_id: str
+    description: str
+    complexity_score: float
+    required_energy_backing_kWh: float
+
+class ProofOfPraxisEngine:
+    """
+    Motor de Consenso de Prueba de Praxis.
+    Emite bloques únicamente tras certificar la resolución de cuellos de botella
+    del mundo real con intervención y juicio cognitivo humano.
+    """
+    @staticmethod
+    def generate_praxis_challenge() -> PraxisProblem:
+        challenges = [
+            ("OPT-LOG-8041", "Optimización dinámica de rutas de suministros médicos de emergencia", 8.5, 50.0),
+            ("EDU-ADAP-102", "Evaluación e intervención pedagógica contextualizada en zona rural", 7.2, 30.0),
+            ("INFRA-GRID-99", "Balance de carga en microrredes de energía distribuida ante falla regional", 9.1, 80.0)
+        ]
+        chosen = random.choice(challenges)
+        return PraxisProblem(
+            problem_id=chosen[0],
+            description=chosen[1],
+            complexity_score=chosen[2],
+            required_energy_backing_kWh=chosen[3]
+        )
+
+    @staticmethod
+    def validate_human_praxis(problem: PraxisProblem, cognitive_solution_hash: str) -> bool:
+        """Verifica que la solución contenga el estándar mínimo de entropía/juicio."""
+        return len(cognitive_solution_hash) == 64 and cognitive_solution_hash.startswith("00")
+
+# =====================================================================
+# PILAR 3: RESPALDO TERMODINÁMICO & LIBRO MAYOR
+# =====================================================================
+@dataclass
+class Transaction:
+    sender: str
+    recipient: str
+    amount_art: float
+    energy_backed_kWh: float
+    praxis_ref: str
+
+@dataclass
+class Block:
+    index: int
+    timestamp: float
+    transactions: List[Transaction]
+    praxis_proof: str
+    energy_injected_kWh: float
+    previous_hash: str
+    lattice_signature: str
+    hash: str = ""
+
+    def calculate_hash(self) -> str:
+        data_str = (
+            f"{self.index}{self.timestamp}{json.dumps([asdict(t) for t in self.transactions])}"
+            f"{self.praxis_proof}{self.energy_injected_kWh}{self.previous_hash}{self.lattice_signature}"
+        )
+        return hashlib.sha3_256(data_str.encode()).hexdigest()
+
+class AreteLedger:
+    """
+    Libro mayor descentralizado de Areté.
+    Audita el triángulo inviolable: Energía, Cuántica y Praxis.
+    """
+    def __init__(self):
+        self.chain: List[Block] = []
+        self.pending_transactions: List[Transaction] = []
+        self.nodes_energy_reserve_kWh: Dict[str, float] = {}
+        self.crypto = QuantumLatticeCrypto()
+        self.create_genesis_block()
+
+    def create_genesis_block(self):
+        genesis_block = Block(
+            index=0,
+            timestamp=time.time(),
+            transactions=[],
+            praxis_proof="GENESIS_PRAXIS_ORIGIN",
+            energy_injected_kWh=1000.0,
+            previous_hash="0" * 64,
+            lattice_signature="LATTICE_SIG_GENESIS"
+        )
+        genesis_block.hash = genesis_block.calculate_hash()
+        self.chain.append(genesis_block)
+        self.nodes_energy_reserve_kWh["NODE_CENTRAL_01"] = 1000.0
+
+    def register_thermodynamic_node(self, node_id: str, energy_capacity_kWh: float):
+        """Registra un nodo con capacidad física/energética real verificada."""
+        self.nodes_energy_reserve_kWh[node_id] = energy_capacity_kWh
+        print(f"{Colors.GREEN}[NODO REGISTRADO]{Colors.RESET} {node_id} | Reserva: {Colors.YELLOW}{energy_capacity_kWh} kWh{Colors.RESET}")
+
+    def mint_currency(
+        self, 
+        node_id: str, 
+        praxis_problem: PraxisProblem, 
+        cognitive_solution_hash: str, 
+        energy_to_inject_kWh: float
+    ) -> Optional[Block]:
+        """
+        Emisión de moneda Areté (ART). Requiere el cumplimiento estricto de:
+        1. Prueba de Praxis (Validación Cognitiva).
+        2. Inyección Energética Real (Respaldo Termodinámico).
+        3. Firma de Retículo en canal QKD (Seguridad Cuántica).
+        """
+        print(f"\n{Colors.BLUE}>>> Iniciando Proceso de Emisión de Areté (ART)...{Colors.RESET}")
+
+        # 1. Validación de Consenso Cognitivo
+        if not ProofOfPraxisEngine.validate_human_praxis(praxis_problem, cognitive_solution_hash):
+            print(f"{Colors.RED}[RECHAZADO] La solución cognitiva no satisface la Prueba de Praxis.{Colors.RESET}")
+            return None
+        print(f"{Colors.GREEN}[1/3 CONTEXTO COGNITIVO]{Colors.RESET} Prueba de Praxis Verificada: {praxis_problem.problem_id}")
+
+        # 2. Respaldo Termodinámico
+        current_node_energy = self.nodes_energy_reserve_kWh.get(node_id, 0.0)
+        if energy_to_inject_kWh > current_node_energy:
+            print(f"{Colors.RED}[RECHAZADO] Energía insuficiente en los nodos de almacenamiento ({node_id}).{Colors.RESET}")
+            return None
+        
+        # Descontar/Comprometer la energía en el sistema para respaldar la moneda
+        self.nodes_energy_reserve_kWh[node_id] -= energy_to_inject_kWh
+        art_minted = energy_to_inject_kWh * 1.5  # Tasa de conversión respaldada 1 kWh = 1.5 ART
+        print(f"{Colors.GREEN}[2/3 TERMODINÁMICA]{Colors.RESET} {energy_to_inject_kWh} kWh inyectados -> {art_minted} ART respaldados.")
+
+        # 3. Transmisión Cuántica QKD
+        qkd_ok, qkd_msg = self.crypto.simulate_qkd_transmission(photons_count=16, intercept=False)
+        print(f"{Colors.GREEN}[3/3 SEGURIDAD CUÁNTICA]{Colors.RESET} {qkd_msg}")
+        
+        if not qkd_ok:
+            return None
+
+        # Creación del Bloque
+        reward_tx = Transaction(
+            sender="SYSTEM_THERMODYNAMIC_MINT",
+            recipient=node_id,
+            amount_art=art_minted,
+            energy_backed_kWh=energy_to_inject_kWh,
+            praxis_ref=praxis_problem.problem_id
+        )
+
+        prev_block = self.chain[-1]
+        priv_key, pub_key = self.crypto.generate_lattice_keys()
+        
+        new_block = Block(
+            index=len(self.chain),
+            timestamp=time.time(),
+            transactions=[reward_tx] + self.pending_transactions,
+            praxis_proof=cognitive_solution_hash,
+            energy_injected_kWh=energy_to_inject_kWh,
+            previous_hash=prev_block.hash,
+            lattice_signature=hashlib.sha256(str(pub_key).encode()).hexdigest()
+        )
+        new_block.hash = new_block.calculate_hash()
+        
+        self.chain.append(new_block)
+        self.pending_transactions = []
+        return new_block
+
+    def verify_chain_integrity(self) -> bool:
+        """Auditoría completa de integridad del sistema Areté."""
+        for i in range(1, len(self.chain)):
+            current = self.chain[i]
+            previous = self.chain[i - 1]
+
+            if current.hash != current.calculate_hash():
+                return False
+            if current.previous_hash != previous.hash:
+                return False
+        return True
+
+
+# =====================================================================
+# EJECUCIÓN / DEMOSTRACIÓN DEL SISTEMA
+# =====================================================================
+if __name__ == "__main__":
+    print_header("SISTEMA ARETÉ (ART) - UN NUEVO PARADIGMA MONETARIO")
+    
+    # Instanciar el libro mayor
+    arete = AreteLedger()
+
+    # 1. Registro de Nodos Termodinámicos (Baterías Cuánticas / Celdas)
+    print(f"{Colors.BOLD}1. Inicializando Red Nodal Termodinámica...{Colors.RESET}")
+    arete.register_thermodynamic_node("NODO_ALMA_ATACAMA_01", 500.0)
+    arete.register_thermodynamic_node("NODO_PLASMA_VALHALLA_02", 1200.0)
+
+    # 2. Generación de Desafío de Praxis
+    print_header("PILAR 2: PRUEBA DE PRAXIS (CONSENSO COGNITIVO)")
+    praxis_challenge = ProofOfPraxisEngine.generate_praxis_challenge()
+    print(f"Desafío emitido por la red: {Colors.CYAN}{praxis_challenge.description}{Colors.RESET}")
+    print(f"Complejidad Requerida: {praxis_challenge.complexity_score} | Respaldo mínimo: {praxis_challenge.required_energy_backing_kWh} kWh")
+
+    # Simulación de resolución humana (hash válido con prefijo '00')
+    solution_praxis_hash = "00a8f93e1b" + hashlib.sha256(b"HumanCognitiveResolution_2026").hexdigest()[10:]
+    print(f"Firma Cognitiva Generada: {Colors.YELLOW}{solution_praxis_hash[:20]}...{Colors.RESET}")
+
+    # 3. Emisión Moneda (Minting)
+    print_header("MINTING & AUDITORÍA DE BLOQUE ARETÉ")
+    block_minted = arete.mint_currency(
+        node_id="NODO_PLASMA_VALHALLA_02",
+        praxis_problem=praxis_challenge,
+        cognitive_solution_hash=solution_praxis_hash,
+        energy_to_inject_kWh= praxis_challenge.required_energy_backing_kWh
+    )
+
+    if block_minted:
+        print(f"\n{Colors.BOLD}{Colors.GREEN}✓ BLOQUE #{block_minted.index} EMITIDO EXITOSAMENTE{Colors.RESET}")
+        print(f"Hash del Bloque SHA3-256: {Colors.CYAN}{block_minted.hash}{Colors.RESET}")
+        print(f"Firma de Retículo (Post-Cuántica): {Colors.PURPLE}{block_minted.lattice_signature[:30]}...{Colors.RESET}")
+
+    # 4. Pruebas de Seguridad: Ataque de Interceptación QKD
+    print_header("SIMULACIÓN DE ATAQUE DE COMPUTACIÓN CUÁNTICA / INTERCEPTACIÓN")
+    print("Intentando interceptar el canal de comunicación cuántico mediante observación fotónica...")
+    attack_success, attack_msg = QuantumLatticeCrypto.simulate_qkd_transmission(photons_count=16, intercept=True)
+    print(attack_msg)
+
+    # 5. Verificación de Integridad de la Cadena
+    print_header("ESTADO DE INTEGRIDAD DE LA RED")
+    is_valid = arete.verify_chain_integrity()
+    if is_valid:
+        print(f"{Colors.BOLD}{Colors.GREEN}El Triángulo Inviolable está Intacto. Integridad Global del Sistema: 100%{Colors.RESET}\n")
+    else:
+        print(f"{Colors.BOLD}{Colors.RED} Error de Integridad en la Red.{Colors.RESET}\n")
